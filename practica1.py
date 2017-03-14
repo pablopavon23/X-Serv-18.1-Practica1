@@ -33,14 +33,17 @@ class recortarURLs(webapp.webApp):
 		except:
 			recurso = "/"
 		#Cojo el cuerpo de mi peticion
-		solicitud = request.split('\r\n\r\n')[1]
-		
+		try:
+			solicitud = request.split('\r\n\r\n')[1]
+		except IndexError:
+			solicitud = ""
+
 		return(metodo, recurso, solicitud)
 #-------------------------------------------------------------------------------
 	def process(self, peticion):
 		metodo, recurso, solicitud = peticion
-		if metodo == "GET":
-			if (recurso != '/'):
+		if metodo == "GET":			#cuando el metodo es GET hago dos cosas:
+			if (recurso != '/'):	#si no me piden nada devuelvo el formulario y la lista de las urls que tengo
 				Url_busqueda = 'http://localhost:1234' + str(recurso)
 				try:
 					Url_redireccion = self.diccionario_URLs_acortadas[Url_busqueda]
@@ -48,19 +51,17 @@ class recortarURLs(webapp.webApp):
 					htmlBody = '<html><head><meta http-equiv="Refresh" content="5;url='+ Url_redireccion +'"></head>' \
 						+ "<body><h1> Espere a ser redirigido " \
 						+ "</h1></body></html>"
-				except KeyError:
+				except KeyError:	#si introduzco algo que no sea localhost:1234/numerodepagina me salta error
 					httpCode = "200 OK"
 					htmlBody = "<html><body>" \
 					+ 'Recurso no valido. Pruebe con localhost:1234/numerodepagina' \
 					+ "</body></html>"
 
-
-			else:
-
+			else:					#si me piden algo sera la url real asociada a la acortada que yo introduzco
 				httpCode = "200 OK"
 				htmlBody = "<html><body>"  \
 					+ '<form method="POST" action="">' \
-					+ 'URL: <input type="text" name="url"><br>' \
+					+ 'URL a acortar: <input type="text" name="url"><br>' \
 					+ '<input type="submit" value="Enviar"><br>' \
 					+ '</form>' \
 					+ "</body></html>"
@@ -69,28 +70,26 @@ class recortarURLs(webapp.webApp):
 					htmlBody = htmlBody + '<html><body><a href="'+ clave +'">' + clave + ' </a></br></body></html>' \
 					+ '<html><body><a href="'+ valor +'">'+ valor + ' </a></br></body></html>'
 
-
-		elif metodo == "PUT" or metodo == "POST":
-			if solicitud != "":
-
+		elif metodo == "PUT" or metodo == "POST":		#si el metodo es PUT o POSTS debo enviar el formulario
+			if solicitud != "":		#el cuerpo de la solicitud no puede estar vacio
 				Url_nueva = solicitud.split("=")[1]
-				Url_nueva = urllib.parse.unquote(Url_nueva, encoding='utf-8', errors='replace')
-				http = Url_nueva.split("://")[0]
+				Url_nueva = urllib.parse.unquote(Url_nueva, encoding='utf-8', errors='replace')	#lo convierto en un string "legible"
 
+				http = Url_nueva.split("://")[0]	#si no tiene el http debo añadirselo
 				if (http != 'http') and (http != 'https'):
 					Url_nueva = 'https://' + Url_nueva
 
 				try:
-					Url_corta = self.diccionario_URLs_reales[Url_nueva]
+					Url_corta = self.diccionario_URLs_reales[Url_nueva]		#si la url ya esta acortada lo aviso y se la doy
 					httpCode = "200 OK"
 					htmlBody = "<html><body><h1> Esta URL ya ha sido acortada " \
 					+ "</h1></body></html>" \
 					+ "\r\n" \
-					+'<html><body><a href="'+ Url_nueva +'">' + Url_nueva + ' </a></br></body></html>'\
-					+ '<html><body><a href="'+ Url_corta +'">'+ Url_corta + ' </a></br></body></html>'
+					+'<html><body>URL real: <a href="'+ Url_nueva +'">' + Url_nueva + ' </a></br></body></html>'\
+					+ '<html><body>URL acortada: <a href="'+ Url_corta +'">'+ Url_corta + ' </a></br></body></html>'
 
-				except KeyError:
-					contador = len(self.diccionario_URLs_reales)
+				except KeyError:											#si no esta le asigno una acortada nueva
+					contador = len(self.diccionario_URLs_reales)			#le doy el numerodepagina ultimo que haya disponible
 					Url_corta_nueva = 'http://localhost:1234/' + str(contador)
 					self.diccionario_URLs_reales[Url_nueva] = Url_corta_nueva
 					self.diccionario_URLs_acortadas[Url_corta_nueva] = Url_nueva
@@ -99,16 +98,16 @@ class recortarURLs(webapp.webApp):
 						introducir_nueva.writerow([Url_corta_nueva,Url_nueva])
 					httpCode = "200 OK"
 					htmlBody = "<html><body>Se ha acortado la URL de forma correcta</br>" \
-					+'<a href="'+ Url_nueva +'">' + Url_nueva + ' </a></br>'\
-					+ '<a href="'+ Url_corta_nueva +'">'+ Url_corta_nueva + ' </a></br></body></html>'
+					+'URL real: <a href="'+ Url_nueva +'">' + Url_nueva + ' </a></br>'\
+					+ 'URL acortada: <a href="'+ Url_corta_nueva +'">'+ Url_corta_nueva + ' </a></br></body></html>'
 
-			else:
+			else:			#si el cuerpo de la peticion, nuestra solicitud, esta vacia es que no me vale
 				httpCode = "200 OK"
 				htmlBody = "<html><body>" \
 				+ 'ERROR:  URL NO VALIDA.' \
 				+ "</body></html>"
 
-		else:
+		else:			#si no es ni GET , ni PUT, NI POST es que esta mal, lo informo
 			httpCode = "450 Metodo no valido"
 			htmlBody = " "
 		return (httpCode, htmlBody)
