@@ -33,11 +33,8 @@ class recortarURLs(webapp.webApp):
 		except:
 			recurso = "/"
 		#Cojo el cuerpo de mi peticion
-		try:
-			solicitud = request.split('\r\n\r\n')[1]
-		except IndexError:
-			solicitud = ""
-
+		solicitud = request.split('\r\n\r\n')[1]
+		
 		return(metodo, recurso, solicitud)
 #-------------------------------------------------------------------------------
 	def process(self, peticion):
